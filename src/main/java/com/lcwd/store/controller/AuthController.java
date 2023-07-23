@@ -105,7 +105,7 @@ public class AuthController {
         User user = null;
         user = userService.getUserByEmailForGoogleAuth(email).orElse(null);
         if (user == null) {
-            user = this.saveUser(email, data.get("name").toString(), data.get("picture").toString());
+            user = this.saveUser(email, payload.get("name").toString(), payload.get("picture").toString());
         }
 //        String newPassword = "";
         return this.authenticateUser(JwtRequest.builder().email(user.getEmail()).password(newPassword).build());
