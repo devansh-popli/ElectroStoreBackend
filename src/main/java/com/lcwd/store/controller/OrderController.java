@@ -23,7 +23,7 @@ public class OrderController {
 
     @PostMapping("/{cartId}/user/{userId}")
     public ResponseEntity<OrderDto> createOrder(@RequestBody OrderDto orderDto, @PathVariable String cartId, @PathVariable String userId) {
-        System.out.println(orderDto.getOrderStatus());
+       // System.out.println(orderDto.getOrderStatus());
         return new ResponseEntity<>(orderService.createOrder(orderDto, userId, cartId), HttpStatus.CREATED);
     }
 
@@ -42,7 +42,10 @@ public class OrderController {
     public ResponseEntity<List<OrderDto>> getOrdersByUser(@PathVariable String userId) {
         return new ResponseEntity<>(orderService.getOrdersOfUsers(userId), HttpStatus.OK);
     }
-
+    @GetMapping("/referral/{referralId}")
+    public ResponseEntity<List<OrderDto>> getOrdersByReferredUser(@PathVariable String referralId) {
+        return new ResponseEntity<>(orderService.getOrdersOfReferralUser(referralId), HttpStatus.OK);
+    }
     @GetMapping()
     public ResponseEntity<PageableResponse<OrderDto>> getAllOrders(@RequestParam(value = "pageNumber", defaultValue = "0", required = false) int pageNumber,
                                                                    @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,

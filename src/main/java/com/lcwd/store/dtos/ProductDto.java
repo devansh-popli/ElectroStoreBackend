@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductDto {
+public class ProductDto implements Serializable {
 
     private String productId;
     private String title;
@@ -25,6 +26,6 @@ public class ProductDto {
     private Date addedDate;
     private boolean live;
     private boolean stock;
-    private String productImage;
+    private List<String> productImages;
     private List<CategoryDto> categories=new ArrayList<>();;
 }

@@ -19,6 +19,8 @@ public interface OrderService {
 
     List<OrderDto> getOrdersOfUsers(String userId);
 
+    List<OrderDto> getOrdersOfReferralUser(String referralId);
+
     //get orders
     PageableResponse<OrderDto> getOrders(int pageNumber, int pageSize, String sortBy, String sortDir);
     public TransactionDetails createTransaction(Long amount) throws RazorpayException ;

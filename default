@@ -1,0 +1,17 @@
+server {
+    listen 80;
+    server_name devya.shop www.devya.shop;
+
+    location / {
+        proxy_pass http://localhost:9091;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+
+
+Hi,  I'm a Java full stack developer with 4+ years of experience building scalable applications using Spring Boot, React.js, and MySQL.  I recently completed a full-stack eCommerce app featuring product listing, cart functionality, an admin panel, and JWT-based authentication — all built using Spring Boot and React.js:  🔗 Live Preview (Staging) → https://venerable-croquembouche-7d9c5f.netlify.app/  You can refer to this project to get a sense of my skills in action — from designing RESTful APIs to integrating a responsive front end.  I focus on writing clean, efficient code and delivering production-ready features. Let’s connect to discuss how I can add value to your project.  Best, Devansh Popli

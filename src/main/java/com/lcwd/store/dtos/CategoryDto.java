@@ -10,10 +10,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CategoryDto {
+public class CategoryDto implements Serializable {
     private String categoryId;
     @NotBlank(message = "title must not be blank")
     @Size(min = 4,message = "title must be minimum of 4 characters")

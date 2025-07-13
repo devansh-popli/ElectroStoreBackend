@@ -50,6 +50,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponseMessage> Exception(Exception ex) {
         logger.info("exception internal server error api request");
+        ex.printStackTrace();
         ApiResponseMessage apiResponseMessage = ApiResponseMessage.builder().message(ex.getMessage()).status(HttpStatus.INTERNAL_SERVER_ERROR).success(true).build();
         return new ResponseEntity<>(apiResponseMessage, HttpStatus.INTERNAL_SERVER_ERROR);
     }

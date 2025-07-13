@@ -7,8 +7,10 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.lcwd.store.dtos.JwtRequest;
 import com.lcwd.store.dtos.JwtResponse;
 import com.lcwd.store.dtos.UserDto;
+import com.lcwd.store.entities.Referral;
 import com.lcwd.store.entities.User;
 import com.lcwd.store.exceptions.BadApiRequestException;
+import com.lcwd.store.repositories.ReferralRespository;
 import com.lcwd.store.security.JwtHelper;
 import com.lcwd.store.services.UserService;
 
@@ -55,6 +57,8 @@ public class AuthController {
 
     @Autowired
     private JwtHelper jwtHelper;
+    @Autowired
+    private ReferralRespository referralRespository;
 
     @Value("${newPassword}")
     private String newPassword;
@@ -72,10 +76,14 @@ public class AuthController {
     public ResponseEntity<JwtResponse> authenticateUser(@RequestBody JwtRequest jwtRequest) {
         this.doAuthenticate(jwtRequest.getEmail(), jwtRequest.getPassword());
         UserDetails userDetails = userDetailsService.loadUserByUsername(jwtRequest.getEmail());
+        UserDto user=modelMapper.map(userDetails, UserDto.class);
+        System.out.println(user.getUserId()+"userid");
+        Referral referral= referralRespository.findByUser(modelMapper.map(user,User.class));
         String token = jwtHelper.generateToken(userDetails);
+        user.setReferralCode(referral!=null? referral.getReferralCode():null);
         JwtResponse response = JwtResponse.builder().
                 jwtToken(token)
-                .user(modelMapper.map(userDetails, UserDto.class))
+                .user(user)
                 .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -116,6 +124,7 @@ public class AuthController {
                 .email(email)
                 .password(newPassword)
                 .imageName(photoUrl)
+                .accountType("normal")
                 .roles(new HashSet<>())
                 .build();
         UserDto userDto = userService.createUser(user);

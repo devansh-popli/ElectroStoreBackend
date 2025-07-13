@@ -1,9 +1,6 @@
 package com.lcwd.store.controller;
 
-import com.lcwd.store.dtos.ApiResponseMessage;
-import com.lcwd.store.dtos.ImageResponse;
-import com.lcwd.store.dtos.PageableResponse;
-import com.lcwd.store.dtos.ProductDto;
+import com.lcwd.store.dtos.*;
 import com.lcwd.store.services.FileService;
 import com.lcwd.store.services.ProductService;
 import com.lcwd.store.services.impl.ProductServiceImpl;
@@ -20,10 +17,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/products")
@@ -89,12 +90,12 @@ public class ProductController {
 
     //getall
     @GetMapping("/search/{productName}")
-    public ResponseEntity<PageableResponse<ProductDto>> searchProducts(@RequestParam(value = "pageNumber", defaultValue = "0", required = false) int pageNumber,
-                                                                       @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+    public ResponseEntity<PageableResponse<ProductSearchDto>> searchProducts(@RequestParam(value = "pageNumber", defaultValue = "0", required = false) int pageNumber,
+                                                                             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
 
-                                                                       @RequestParam(value = "sortBy", defaultValue = "title", required = false)
+                                                                             @RequestParam(value = "sortBy", defaultValue = "title", required = false)
                                                                        String sortBy,
-                                                                       @RequestParam(value = "sortDir", defaultValue = "asc", required = false)
+                                                                             @RequestParam(value = "sortDir", defaultValue = "asc", required = false)
                                                                        String sortDir, @PathVariable String productName) {
         return new ResponseEntity<>(productService.searchProducts(productName, pageNumber, pageSize, sortBy, sortDir), HttpStatus.CREATED);
     }
@@ -107,24 +108,52 @@ public class ProductController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/image/{ProductId}")
-    public ResponseEntity<ImageResponse> uploadProductImage(@RequestParam("ProductImage") MultipartFile image, @PathVariable String ProductId) throws IOException {
-        String imageName = fileService.uploadImage(image, imageUploadPath);
-        ImageResponse response = ImageResponse.builder().success(true).status(HttpStatus.OK).imageName(imageName).message("Image Saved Successfully").build();
-        ProductDto ProductDto = productService.getProduct(ProductId);
-        ProductDto.setProductImage(imageName);
-        ProductDto ProductDto1 = productService.updateProduct(ProductDto, ProductId);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<List<ImageResponse>> uploadProductImage(   @RequestParam("ProductImages") MultipartFile[] images, @PathVariable String ProductId) throws IOException {
+        List<ImageResponse> responses = new ArrayList<>();
+        ProductDto productDto = productService.getProduct(ProductId);
+        List<String> imageNames = new ArrayList<>();
+
+        for (MultipartFile image : images) {
+            if (!image.isEmpty()) {
+                String imageName = fileService.uploadImage(image, imageUploadPath);
+                imageNames.add(imageName);
+                responses.add(ImageResponse.builder()
+                        .success(true)
+                        .status(HttpStatus.OK)
+                        .imageName(imageName)
+                        .message("Image Saved Successfully")
+                        .build());
+            } else {
+                responses.add(ImageResponse.builder()
+                        .success(false)
+                        .status(HttpStatus.BAD_REQUEST)
+                        .message("Empty Image File")
+                        .build());
+            }
+        }
+
+        // Update the product with the image names
+        productDto.setProductImages(imageNames); // Assuming your ProductDto has a `List<String>` for images
+        productService.updateProduct(productDto, ProductId);
+        return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
     @PreAuthorize("permitAll()")
     @GetMapping("/image/{ProductId}")
-    public void getProductImage(@PathVariable String ProductId, HttpServletResponse response) throws IOException {
-        ProductDto ProductDto = productService.getProduct(ProductId);
-        log.info("Product Image Name {}", ProductDto.getProductImage());
-        InputStream resource = fileService.getResouce(imageUploadPath, ProductDto.getProductImage());
-        response.setContentType(MediaType.IMAGE_JPEG_VALUE);
-        //to remember
-        StreamUtils.copy(resource, response.getOutputStream());
+    public ResponseEntity<List<String>> getProductImages(@PathVariable String ProductId) {
+        List<String> productImages = productService.findProductImages(ProductId);
+        log.info("Product Image Names: {}", productImages);
 
+        // Optionally, generate full URLs if needed
+        List<String> imageUrls = productImages.stream()
+                .map(imageName -> ServletUriComponentsBuilder
+                        .fromCurrentContextPath()
+                        .path(imageUploadPath)
+                        .path(imageName)
+                        .toUriString())
+                .collect(Collectors.toList());
+        System.out.println(imageUrls);
+
+        return ResponseEntity.ok(imageUrls);
     }
 }

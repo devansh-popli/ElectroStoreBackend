@@ -2,6 +2,7 @@ package com.lcwd.store.services;
 
 import com.lcwd.store.dtos.PageableResponse;
 import com.lcwd.store.dtos.ProductDto;
+import com.lcwd.store.dtos.ProductSearchDto;
 import com.lcwd.store.entities.Product;
 import org.springframework.data.domain.Pageable;
 
@@ -30,7 +31,9 @@ public interface ProductService {
 
     ProductDto updateProductWithCategory(String productId, List<String> categoryId);
 
-    PageableResponse<ProductDto> searchProducts(String productName, int pageNumber, int pageSize, String sortBy, String sortDir);
+    PageableResponse<ProductSearchDto> searchProducts(String productName, int pageNumber, int pageSize, String sortBy, String sortDir);
 
     PageableResponse<ProductDto> getAllOfCategory(int pageNumber, int pageSize, String sortBy, String sortDir, String categoryId);
+
+    List<String> findProductImages(String productId);
 }

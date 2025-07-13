@@ -11,6 +11,9 @@ import com.lcwd.store.services.CategoryService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +43,7 @@ public class CategoryServiceImpl implements CategoryService {
     private String imageUploadPath;
 
     @Override
+    @CacheEvict(value = "categories",allEntries = true)
     public CategoryDto createcategory(CategoryDto categoryDto) {
         categoryDto.setCategoryId(UUID.randomUUID().toString());
         Category category = categoryRepository.save(modelMapper.map(categoryDto, Category.class));
@@ -47,6 +51,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryDto updatecategory(CategoryDto categoryDto, String categoryId) {
         Category category = categoryRepository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         category.setTitle(categoryDto.getTitle());
@@ -57,6 +62,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public void deleteCategory(String categoryId) {
         Category category = categoryRepository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         String fullPath=imageUploadPath+category.getCoverImage();
@@ -79,6 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories", key = "'page_' + #pageNumber + '_size_' + #pageSize + '_sort_' + #sortBy + '_dir_' + #sortDir")
     public PageableResponse<CategoryDto> getAllCategory(int pageNumber, int pageSize, String sortBy, String sortDir) {
         Sort sort = (sortDir.equalsIgnoreCase("asc")) ? (Sort.by(sortBy).ascending()) : (Sort.by(sortBy).descending());
         Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
@@ -88,6 +95,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories",key = "#categoryId")
     public CategoryDto getCategoryById(String categoryId) {
         Category category = categoryRepository.findById(categoryId).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         return modelMapper.map(category, CategoryDto.class);

@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 
@@ -33,8 +34,22 @@ public class UserDto {
     private String gender;
     @NotBlank(message = "Write something about yourself!!")
     private String about;
+    private String accountType;
     //custom validator
 //    @ImageNameValid
+    private String parentReferralCode;
+    private String bankAccountNumber;
+    private String ifscCode;
+    private String bankName;
     private String imageName;
     private Set<RoleDto> roles=new HashSet<>();
+    private String referralCode;
+    private Double totalEarnings;
+    private Double monthlyEarnings;
+    private List<EarningsHistoryDto> directEarningsHistory;
+    private List<EarningsHistoryDto> indirectEarningsHistory;
+    private Set<ScreenPermissionRequest> screenPermissions;
+    private boolean referralRewardGiven=false;
+    private Double oneTimeReferralEarning;
+    private Double inActiveMoney;
 }

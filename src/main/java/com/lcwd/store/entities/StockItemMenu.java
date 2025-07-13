@@ -25,6 +25,7 @@ public class StockItemMenu {
         private String cgst;
         private String sgst;
         private String purchaseAccount;
+        private String materialType;
         private String saleAccount;
         private String size;
         private String hsnCode;
@@ -38,6 +39,7 @@ public class StockItemMenu {
         private String stockValuation;
         private String qtyPerPcCase;
         private String minStockLevel;
+        private String maxStockLevel;
         private String taxType;
         private String gstType;
     @Column(name = "is_deleted")

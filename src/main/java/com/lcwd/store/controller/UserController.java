@@ -1,9 +1,6 @@
 package com.lcwd.store.controller;
 
-import com.lcwd.store.dtos.ApiResponseMessage;
-import com.lcwd.store.dtos.ImageResponse;
-import com.lcwd.store.dtos.PageableResponse;
-import com.lcwd.store.dtos.UserDto;
+import com.lcwd.store.dtos.*;
 import com.lcwd.store.entities.User;
 import com.lcwd.store.services.FileService;
 import com.lcwd.store.services.UserService;
@@ -24,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/users")
@@ -113,5 +111,32 @@ public class UserController {
         //to remember
         StreamUtils.copy(resource, response.getOutputStream());
 
+    }
+    @PostMapping("/{userId}/screen-permissions")
+    public ResponseEntity<?> setScreenPermissions(
+            @PathVariable String userId,
+            @RequestBody Set<ScreenPermissionRequest> screenPermissionsRequest
+    ) {
+        try {
+            userService.updateScreenPermissions(userId, screenPermissionsRequest);
+            return ResponseEntity.ok("Screen permissions updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating screen permissions: " + e.getMessage());
+        }
+    }
+    @GetMapping("/roles")
+    public ResponseEntity<List<RoleDto>> getAllRoles() {
+        return new ResponseEntity<>(userService.getRoles(), HttpStatus.OK);
+    }
+    @GetMapping("/role/{roleName}")
+    public ResponseEntity<PageableResponse<UserDto>> getAllUsersByRole(@RequestParam(value = "pageNumber", defaultValue = "0", required = false) int pageNumber,
+                                                                       @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+
+                                                                       @RequestParam(value = "sortBy", defaultValue = "name", required = false)
+                                                                       String sortBy,
+                                                                       @RequestParam(value = "sortDir", defaultValue = "asc", required = false)
+                                                                       String sortDir,@PathVariable String roleName) {
+        return new ResponseEntity<>(userService.getAllUsersByRole(pageNumber, pageSize, sortBy, sortDir,roleName), HttpStatus.CREATED);
     }
 }

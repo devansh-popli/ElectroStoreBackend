@@ -22,6 +22,7 @@ public class StockItemMenuDto {
     private String sgst;
     private String purchaseAccount;
     private String saleAccount;
+    private String materialType;
     private String size;
     private String hsnCode;
     private String scheme;
@@ -34,6 +35,7 @@ public class StockItemMenuDto {
     private String stockValuation;
     private String qtyPerPcCase;
     private String minStockLevel;
+    private String maxStockLevel;
     private String taxType;
     private String gstType;
 }

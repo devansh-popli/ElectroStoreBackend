@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: newecom
+    ports:
+        - "3307:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
+  redis:
+    image: redis:latest
+    container_name: redisserver
+    ports:
+      - "6379:6379"
+  springboot:
+    build:
+      context: .
+      args:
+       JAR_FILE: target/app1.jar
+    container_name: ecomstore_springboot_project
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      SPRING_DATA_REDIS_HOST: redis
+      MYSQL_PASSWORD: root1234
+    ports:
+      - "9091:9090"
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./projects/images:/images
+  springboot1:
+    build:
+      context: .
+      args:
+        JAR_FILE: target/app2.jar
+    container_name: quizapp
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_PASSWORD: root1234
+    ports:
+      - "9093:9092"
+    depends_on:
+      - mysql
+
+networks:
+  shared-net:
+    external: true
+    name: shared-mysql-net
+
+
+

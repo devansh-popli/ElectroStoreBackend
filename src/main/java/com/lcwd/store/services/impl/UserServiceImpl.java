@@ -1,14 +1,16 @@
 package com.lcwd.store.services.impl;
 
-import com.lcwd.store.dtos.PageableResponse;
-import com.lcwd.store.dtos.UserDto;
-import com.lcwd.store.entities.Role;
-import com.lcwd.store.entities.User;
+import com.lcwd.store.dtos.*;
+import com.lcwd.store.entities.*;
 import com.lcwd.store.exceptions.ResourceNotFoundException;
 import com.lcwd.store.helper.HelperUtils;
+import com.lcwd.store.repositories.ReferralRespository;
 import com.lcwd.store.repositories.RoleRepository;
 import com.lcwd.store.repositories.UserRepository;
+import com.lcwd.store.services.OrderService;
 import com.lcwd.store.services.UserService;
+import io.netty.util.internal.StringUtil;
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,10 +26,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,46 +39,113 @@ public class UserServiceImpl implements UserService {
 
     @Value("${normal.role.id}")
     private String normalRoleId;
+    @Value("${business.role.id}")
+    private String businessRoleId;
 
     @Autowired
     private RoleRepository roleRepository;
     @Autowired
+    private ReferralRespository referralRespository;
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private OrderService orderService;
+    @Autowired
     private ModelMapper modelMapper;
 
+    public static String generateReferralCode() {
+        // Generate a UUID and take the first 8 characters for the referral code
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+
     @Override
+    @Transactional
     public UserDto createUser(UserDto userDto) {
         String userId = UUID.randomUUID().toString();
         userDto.setUserId(userId);
         userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
         User user = dtoToEntity(userDto);
         Role role = roleRepository.findById(normalRoleId).get();
+        if (userDto.getAccountType() != null && userDto.getAccountType().equalsIgnoreCase("Business")) {
+            role = roleRepository.findById(businessRoleId).get();
+        }
         user.setRoles(Collections.singleton(role));
+        if (userDto.getAccountType() != null && userDto.getAccountType().equalsIgnoreCase("Business")) {
+            Referral referral = new Referral();
+            String referralId = UUID.randomUUID().toString();
+            referral.setReferralid(referralId);
+            referral.setReferralCode(generateReferralCode());
+            referral.setUser(user);
+            user.setReferral(referral);
+            if(!StringUtil.isNullOrEmpty(user.getParentReferralCode())) {
+                Optional<Referral> parentReferral = referralRespository.findByReferralCode(user.getParentReferralCode());
+                if (parentReferral.isPresent()) {
+                    User parentUser = parentReferral.get().getUser();
+                    parentUser.setInActiveMoney(parentUser.getInActiveMoney() != null ? parentUser.getInActiveMoney() + 200 : 200);
+                    if(!StringUtil.isNullOrEmpty(parentUser.getParentReferralCode())) {
+                        Optional<Referral> parentsParentReferral = referralRespository.findByReferralCode(parentUser.getParentReferralCode());
+                        if (parentsParentReferral.isPresent()) {
+                            User parentsParentUser = parentsParentReferral.get().getUser();
+                            parentsParentUser.setInActiveMoney(parentsParentUser.getInActiveMoney() != null ? parentsParentUser.getInActiveMoney() + 100 : 100);
+                            userRepository.save(parentsParentUser);
+                        }
+                    }
+                    userRepository.save(parentUser);
+                }
+            }
+
+        }
         User savedUser = userRepository.save(user);
-        UserDto newDto = entityToDto(user);
+        UserDto newDto = entityToDto(savedUser);
         return newDto;
     }
 
     private UserDto entityToDto(User user) {
 
-        return modelMapper.map(user,UserDto.class) ;
+        return modelMapper.map(user, UserDto.class);
     }
 
     private User dtoToEntity(UserDto userDto) {
-       return modelMapper.map(userDto,User.class);
+        return modelMapper.map(userDto, User.class);
     }
 
+    public void updateScreenPermissions(String userId, Set<ScreenPermissionRequest> screenPermissions) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // Update or create ScreenPermission entities based on the request
+        Set<ScreenPermission> screenPermissionEntities = screenPermissions.stream()
+                .map(request -> {
+                    ScreenPermission screenPermission = user.getScreenPermissions().stream()
+                            .filter(existingPermission -> existingPermission.getScreenName().equals(request.getScreenName()))
+                            .findFirst()
+                            .orElse(new ScreenPermission());
+
+                    screenPermission.setScreenName(request.getScreenName());
+                    screenPermission.setCanRead(request.isCanRead());
+                    screenPermission.setCanWrite(request.isCanWrite());
+                    screenPermission.setCanUpdate(request.isCanUpdate());
+                    screenPermission.setCanDelete(request.isCanDelete());
+                    User user1=new User();
+                    user1.setUserId(userId);
+                    screenPermission.setUser(user1);
+                    return screenPermission;
+                })
+                .collect(Collectors.toSet());
+
+        user.setScreenPermissions(screenPermissionEntities);
+
+        userRepository.save(user);
+    }
     @Override
     public UserDto updateUser(UserDto userDto, String userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
         user.setName(userDto.getName());
         user.setAbout(userDto.getAbout());
         user.setGender(userDto.getGender());
-        if(userDto.getPassword()!=null && !userDto.getPassword().isEmpty() && !user.getPassword().equals(userDto.getPassword()))
-        {
-        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        if (userDto.getPassword() != null && !userDto.getPassword().isEmpty() && !user.getPassword().equals(userDto.getPassword())) {
+            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
         }
         user.setImageName(userDto.getImageName());
         User updatedUser = userRepository.save(user);
@@ -117,7 +184,60 @@ public class UserServiceImpl implements UserService {
         Sort sort = (sortDir.equalsIgnoreCase("asc")) ? (Sort.by(sortBy).ascending()) : (Sort.by(sortBy).descending());
         Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
         Page<User> page = userRepository.findAll(pageable);
-        PageableResponse<UserDto> response = HelperUtils.getPageableResponse(page, UserDto.class);
+        Map<String, List<User>> groupByParentCodeMap = page.getContent().stream()
+                .collect(Collectors.groupingBy(user ->
+                        user.getParentReferralCode() == null ? "UNKNOWN" : user.getParentReferralCode()));
+        List<UserDto> usersWithEarningsHistory = page.getContent().stream()
+                .map(user -> {
+                    // Calculate earnings history for each user
+                    List<EarningsHistoryDto> indirectCommissionList = null;
+                    if (user.getReferral() != null) {
+                        List<User> childUsers = groupByParentCodeMap.get(user.getReferral().getReferralCode());
+                        if (childUsers != null) {
+                            indirectCommissionList = childUsers.stream()
+                                    .flatMap(childUser -> childUser.getOrdersByReferralUser().stream()
+                                            .collect(Collectors.groupingBy(
+                                                    order -> order.getOrderedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1),
+                                                    Collectors.summingLong(Order::getOrderAmount)
+                                            ))
+                                            .entrySet().stream()
+                                            .map(entry -> new EarningsHistoryDto(
+                                                    Date.from(entry.getKey().atStartOfDay(ZoneId.systemDefault()).toInstant()),
+                                                    entry.getValue(),
+                                                    Math.round(entry.getValue() * 0.01) // Calculate 2% commission
+                                            ))
+                                            .sorted((d1, d2) -> d2.getMonth().compareTo(d1.getMonth())) // Sort by month descending
+                                    ).toList();
+                        }
+                    }
+                    List<EarningsHistoryDto> earningsHistoryDirect = user.getOrdersByReferralUser().stream()
+                            .collect(Collectors.groupingBy(
+                                    order -> order.getOrderedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1),
+                                    Collectors.summingLong(Order::getOrderAmount)
+                            ))
+                            .entrySet().stream()
+                            .map(entry -> new EarningsHistoryDto(
+                                    Date.from(entry.getKey().atStartOfDay(ZoneId.systemDefault()).toInstant()),
+                                    entry.getValue(),
+                                    Math.round(entry.getValue() * 0.02) // Calculate 2% commission
+                            ))
+                            .sorted((d1, d2) -> d2.getMonth().compareTo(d1.getMonth())) // Sort by month descending
+                            .collect(Collectors.toList());
+
+                    // Map user entity to DTO and set earnings history
+                    UserDto userDto = modelMapper.map(user, UserDto.class);
+                    userDto.setDirectEarningsHistory(earningsHistoryDirect);
+                    userDto.setIndirectEarningsHistory(indirectCommissionList);
+                    return userDto;
+                })
+                .collect(Collectors.toList());
+        PageableResponse<UserDto> response = new PageableResponse<>();
+        response.setContent(usersWithEarningsHistory);
+        response.setPageNumber(page.getNumber());
+        response.setPageSize(page.getSize());
+        response.setTotalElements(page.getTotalElements());
+        response.setTotalPages(page.getTotalPages());
+        response.setLastPage(page.isLast());
         return response;
     }
 
@@ -131,5 +251,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> getUserByEmailForGoogleAuth(String email) {
         return userRepository.findByEmail(email);
+    }
+    @Override
+    public List<RoleDto> getRoles() {
+        List<Role> roles = roleRepository.findAll();
+        List<RoleDto> roleDtos = roles.stream().map(role -> roleToDto(role)).collect(Collectors.toList());
+        return roleDtos;
+    }
+    private RoleDto roleToDto(Role user) {
+
+        return modelMapper.map(user,RoleDto.class) ;
+    }
+
+    @Override
+    public PageableResponse<UserDto> getAllUsersByRole(int pageNumber, int pageSize, String sortBy, String sortDir, String roleName) {
+        Sort sort = (sortDir.equalsIgnoreCase("asc")) ? (Sort.by(sortBy).ascending()) : (Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
+        Role role =roleRepository.findByRoleName(roleName).orElseThrow(()-> new ResourceNotFoundException("Role Not found with role name"+roleName));
+        Page<User> page = userRepository.findByRoles(pageable,role);
+        PageableResponse<UserDto> response = HelperUtils.getPageableResponse(page, UserDto.class);
+        return response;
     }
 }

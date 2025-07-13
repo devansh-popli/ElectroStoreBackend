@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,8 +25,7 @@ import java.util.stream.Collectors;
 @Builder
 @Table(name = "users")
 public class User implements UserDetails {
-    @OneToMany(mappedBy = "user")
-    List<Order> orders = new ArrayList<>();
+
     @Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY )
     private String userId;
@@ -40,9 +41,23 @@ public class User implements UserDetails {
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Set<Role> roles = new HashSet<>();
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Cart cart;
-
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL,fetch = FetchType.LAZY)
+    private Referral referral;
+    private String parentReferralCode;
+    private String bankAccountNumber;
+    private String ifscCode;
+    private String bankName;
+    @OneToMany(mappedBy = "user",fetch=FetchType.LAZY)
+    List<Order> orders = new ArrayList<>();
+    private boolean referralRewardGiven=false;
+    private Double oneTimeReferralEarning;
+    private Double inActiveMoney;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<ScreenPermission> screenPermissions;
+    @OneToMany(mappedBy = "referralUser",fetch = FetchType.LAZY)
+    List<Order> ordersByReferralUser = new ArrayList<>();
     //must have to implement
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

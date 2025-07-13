@@ -3,15 +3,14 @@ package com.lcwd.store.dtos;
 import com.lcwd.store.entities.OrderItem;
 import com.lcwd.store.entities.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderDto {
@@ -31,4 +30,9 @@ public class OrderDto {
     private List<OrderItemDto> orderItems=new ArrayList<>();
     private String razorPayOrderId;
     private String razorPayPaymentId;
+    @Setter(AccessLevel.NONE)
+    private String referralCode;
+    private Boolean isChildOrder;
+    private UserDto childUser;
+    private Double yourCommission;
 }

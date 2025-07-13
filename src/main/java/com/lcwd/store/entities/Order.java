@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.modelmapper.internal.bytebuddy.matcher.FilterableList;
 
 import java.util.ArrayList;
@@ -34,10 +36,11 @@ public class Order {
     private Date deliveredDate;
     private String razorPayPaymentId;
     private String razorPayOrderId;
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     private User user;
-
-    @OneToMany(mappedBy = "order",fetch = FetchType.EAGER,cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User referralUser;
+    @OneToMany(mappedBy = "order",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     private List<OrderItem> orderItems=new ArrayList<>();
 
 }

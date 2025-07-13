@@ -20,8 +20,8 @@ public class OrderItem {
     private int orderItemId;
     private int quantity;
     private long totalPrice;
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     private Product product;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
 }
